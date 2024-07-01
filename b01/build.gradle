@@ -30,9 +30,11 @@ repositories {
 }
 
 dependencies {
+
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
@@ -54,6 +56,17 @@ dependencies {
     implementation 'org.modelmapper:modelmapper:3.1.0'
 
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // Swagger UL 를 이용한 REST 방식의 댓글 처리 구현
+    implementation 'io.springfox:springfox-boot-starter:3.0.0'
+    implementation 'io.springfox:springfox-swagger-ui:3.0.0'
+
+    implementation 'jakarta.servlet:jakarta.servlet-api:5.0.0'
+    implementation 'jakarta.validation:jakarta.validation-api:3.0.0'
+    implementation 'jakarta.transaction:jakarta.transaction-api:2.0.0'
+
+    // 섬네일 라이브러리
+    implementation 'net.coobird:thumbnailator:0.4.16'
 }
 
 tasks.named('test') {
@@ -68,6 +81,3 @@ sourceSets {
     }
 }
 
-tasks.withType(JavaCompile) {
-    options.annotationProcessorGeneratedSourcesDirectory = file("$buildDir/generated/sources/annotationProcessor/java/main")
-}
