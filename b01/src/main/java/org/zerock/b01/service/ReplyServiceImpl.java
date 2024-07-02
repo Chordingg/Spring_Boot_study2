@@ -29,8 +29,7 @@ public class ReplyServiceImpl implements ReplyService{
     private final ModelMapper modelMapper;
 
     @Override
-    public Long register(ReplyDTO replyDTO) {
-
+    public Long insert(ReplyDTO replyDTO) {
         Reply reply = modelMapper.map(replyDTO, Reply.class);
 
         Long rno = replyRepository.save(reply).getRno();
@@ -40,46 +39,32 @@ public class ReplyServiceImpl implements ReplyService{
 
     @Override
     public ReplyDTO read(Long rno) {
-
-        Optional<Reply> replyOptional = replyRepository.findById(rno);
-
-        Reply reply = replyOptional.orElseThrow();
+        Reply reply = replyRepository.findById(rno).orElseThrow();
 
         return modelMapper.map(reply, ReplyDTO.class);
     }
 
     @Override
     public void modify(ReplyDTO replyDTO) {
+        Reply reply = replyRepository.findById(replyDTO.getRno()).orElseThrow();
 
-        Optional<Reply> replyOptional = replyRepository.findById(replyDTO.getRno());
-
-        Reply reply = replyOptional.orElseThrow();
-
-        reply.changeText(replyDTO.getReplyText());
+        reply.changeText(replyDTO.getReplyText()); // 댓글 내용만 수정
 
         replyRepository.save(reply);
-
     }
 
     @Override
     public void remove(Long rno) {
-
         replyRepository.deleteById(rno);
-
     }
 
     @Override
     public PageResponseDTO<ReplyDTO> getListOfBoard(Long bno, PageRequestDTO pageRequestDTO) {
-
-        Pageable pageable = PageRequest.of(pageRequestDTO.getPage() <=0? 0: pageRequestDTO.getPage() -1,
-                pageRequestDTO.getSize(),
-                Sort.by("rno").ascending());
-
+        // 시작                                                         // 끝                      // 정렬기준
+        Pageable pageable = PageRequest.of(pageRequestDTO.getPage() <= 0 ? 0 : pageRequestDTO.getPage() -1, pageRequestDTO.getSize(), Sort.by("rno").ascending());
         Page<Reply> result = replyRepository.listOfBoard(bno, pageable);
 
-        List<ReplyDTO> dtoList =
-                result.getContent().stream().map(reply -> modelMapper.map(reply, ReplyDTO.class))
-                        .collect(Collectors.toList());
+        List<ReplyDTO> dtoList = result.getContent().stream().map(reply -> modelMapper.map(reply, ReplyDTO.class)).collect(Collectors.toList());
 
         return PageResponseDTO.<ReplyDTO>withAll()
                 .pageRequestDTO(pageRequestDTO)

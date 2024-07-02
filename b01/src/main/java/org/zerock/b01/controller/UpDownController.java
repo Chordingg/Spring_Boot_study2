@@ -1,7 +1,5 @@
 package org.zerock.b01.controller;
 
-import io.swagger.annotations.ApiOperation;
-import lombok.extern.log4j.Log4j2;
 import net.coobird.thumbnailator.Thumbnailator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -21,41 +19,34 @@ import java.nio.file.Paths;
 import java.util.*;
 
 @RestController
-@Log4j2
 public class UpDownController {
 
-    @Value("${org.zerock.upload.path}") // import 시에 springframework 으로 시작하는 Value
+    @Value("${org.zerock.upload.path}") // import 시에 springframework으로 시작하는 Value
     private String uploadPath;
 
-    @ApiOperation(value = "/Upload Post", notes = "POST 방식으로 파일 등록")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public List<UploadResultDTO> upload(UploadFileDTO uploadFileDTO){
-        log.info(uploadFileDTO);
-
-        if (uploadFileDTO.getFiles() != null) {
-
+        if(uploadFileDTO.getFiles() != null){
             final List<UploadResultDTO> list = new ArrayList<>();
 
             uploadFileDTO.getFiles().forEach(multipartFile -> {
-
-                String originalName = multipartFile.getOriginalFilename();
-                log.info(originalName);
+                String originName = multipartFile.getOriginalFilename();
+                System.out.println(originName);
 
                 String uuid = UUID.randomUUID().toString();
 
-                Path savePath = Paths.get(uploadPath, uuid+"_" + originalName);
+                Path savePath = Paths.get(uploadPath, uuid+"_"+originName);
 
                 boolean image = false;
 
-                try{
-                    multipartFile.transferTo(savePath); // 실제 파일 저장
+                try {
+                    multipartFile.transferTo(savePath);
 
                     // 이미지 파일의 종류라면
-                    if(Files.probeContentType(savePath).startsWith("image")) {
-
+                    if(Files.probeContentType(savePath).startsWith("image")){
                         image = true;
 
-                        File thumbFile = new File(uploadPath, "s_" + uuid + "_" + originalName);
+                        File thumbFile = new File(uploadPath, "s_" + uuid + "_" + originName);
 
                         Thumbnailator.createThumbnail(savePath.toFile(), thumbFile, 200, 200);
                     }
@@ -64,37 +55,36 @@ public class UpDownController {
                 }
 
                 list.add(UploadResultDTO.builder()
-                                .uuid(uuid)
-                                .fileName(originalName)
-                                .img(image)
-                        .build());
-            });  // end each
-        }  // end if
+                        .uuid(uuid)
+                        .fileName(originName)
+                        .img(image).build());
+            });
+            return list;
+        }
 
         return null;
     }
 
-    @ApiOperation(value = "view 파일", notes = "GET 방식으로 첨부파일 조회")
     @GetMapping("/view/{fileName}")
-    public ResponseEntity<Resource> viewFileGET(@PathVariable String fileName){
-
+    public ResponseEntity<Resource> viewFileGET(@PathVariable("fileName") String fileName){
         Resource resource = new FileSystemResource(uploadPath+File.separator + fileName);
+
         String resourceName = resource.getFilename();
         HttpHeaders headers = new HttpHeaders();
 
-        try{
-            headers.add("Content-Type", Files.probeContentType( resource.getFile().toPath()));
-        } catch(Exception e){
+        try {
+            headers.add("Content-Type", Files.probeContentType(resource.getFile().toPath()));
+        }catch (Exception e){
             return ResponseEntity.internalServerError().build();
         }
+
         return ResponseEntity.ok().headers(headers).body(resource);
     }
 
-    @ApiOperation(value = "remove 파일", notes = "DELETE 방식으로 파일 삭제")
     @DeleteMapping("/remove/{fileName}")
-    public Map<String,Boolean> removeFile(@PathVariable String fileName){
+    public Map<String, Boolean> removeFile(@PathVariable("fileName") String fileName){
+        Resource resource = new FileSystemResource(uploadPath+File.separator+fileName);
 
-        Resource resource = new FileSystemResource(uploadPath+File.separator + fileName);
         String resourceName = resource.getFilename();
 
         Map<String, Boolean> resultMap = new HashMap<>();
@@ -104,19 +94,17 @@ public class UpDownController {
             String contentType = Files.probeContentType(resource.getFile().toPath());
             removed = resource.getFile().delete();
 
-            //섬네일이 존재한다면
+            // 섬네일이 존재한다면
             if(contentType.startsWith("image")){
-                File thumbnailFile = new File(uploadPath+File.separator +"s_" + fileName);
+                File thumbnailFile = new File(uploadPath+File.separator+ "s_"+ fileName);
                 thumbnailFile.delete();
             }
-
-        } catch (Exception e) {
-            log.error(e.getMessage());
+        }catch (Exception e){
+            System.out.println(e.getMessage());
         }
 
         resultMap.put("result", removed);
 
         return resultMap;
     }
-
 }

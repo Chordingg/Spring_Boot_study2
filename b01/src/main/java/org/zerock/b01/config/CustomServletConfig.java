@@ -22,5 +22,4 @@ public class CustomServletConfig implements WebMvcConfigurer {
                 addResourceLocations("classpath:/static/assets/");
 
     }
-
 }

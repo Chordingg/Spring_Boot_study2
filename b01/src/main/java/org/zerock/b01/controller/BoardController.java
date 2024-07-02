@@ -2,95 +2,88 @@ package org.zerock.b01.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.zerock.b01.dto.BoardDTO;
-import org.zerock.b01.dto.BoardListReplyCountDTO;
-import org.zerock.b01.dto.PageRequestDTO;
-import org.zerock.b01.dto.PageResponseDTO;
+import org.zerock.b01.dto.*;
 import org.zerock.b01.service.BoardService;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.util.List;
+
 @Controller
-@Log4j2
-@RequiredArgsConstructor
 @RequestMapping("/board")
+@RequiredArgsConstructor
+@Log4j2
 public class BoardController {
+
+    @Value("${org.zerock.upload.path}")
+    private String uploadPath;
 
     private final BoardService boardService;
 
     @GetMapping("/list")
-    public void list(PageRequestDTO pageRequestDTO, Model model) {
+    public void list(PageRequestDTO pageRequestDTO, Model model){
+        log.info(pageRequestDTO);
 
-        //  PageResponseDTO<BoardDTO> responseDTO = boardService.list(pageRequestDTO);
-        PageResponseDTO<BoardListReplyCountDTO> responseDTO = boardService.listWithReplyCount(pageRequestDTO);
+//        PageResponseDTO<BoardDTO> responseDTO = boardService.list(pageRequestDTO);
+
+        PageResponseDTO<BoardListAllDTO> responseDTO = boardService.listWithAll(pageRequestDTO);
 
         log.info(responseDTO);
 
         model.addAttribute("responseDTO", responseDTO);
     }
 
-    @GetMapping("/register")
-    public void registerGet(){
 
+    @PreAuthorize("hasRole('USER')")
+    @GetMapping("/insert")
+    public void insertGET(){
     }
 
-    @PostMapping("/register")
-    public String registerPost(@Valid BoardDTO boardDTO, BindingResult bindingResult, RedirectAttributes redirectAttributes) {
 
-        log.info("board Post register..............");
-
-        if(bindingResult.hasErrors()) {
+    @PostMapping("/insert")
+    public String insertPOST(@Valid BoardDTO boardDTO, BindingResult bindingResult, RedirectAttributes redirectAttributes){
+        if(bindingResult.hasErrors()){
             redirectAttributes.addFlashAttribute("errors", bindingResult.getAllErrors());
 
-            return "redirect:/board/register";
+            return "redirect:/board/insert";
         }
 
-        Long bno = boardService.register(boardDTO);
-
-        log.info("-------------------------");
-        log.info("bno : " + bno);
-        log.info("-------------------------");
+        Long bno = boardService.insert(boardDTO);
 
         redirectAttributes.addFlashAttribute("result", bno);
 
         return "redirect:/board/list";
-
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping({"/read", "/modify"})
-    public void read(@RequestParam("bno") Long bno, PageRequestDTO pageRequestDTO, Model model) {
-
+    public void read(@RequestParam("bno") Long bno, PageRequestDTO pageRequestDTO, Model model){
         BoardDTO boardDTO = boardService.readOne(bno);
-
-        log.info("readGet...." + boardDTO);
 
         model.addAttribute("dto", boardDTO);
     }
 
+    @PreAuthorize("principal.username == #boardDTO.writer")
     @PostMapping("/modify")
-    public String modify( PageRequestDTO pageRequestDTO,
-                          @Valid BoardDTO boardDTO,
-                          BindingResult bindingResult,
-                          RedirectAttributes redirectAttributes){
-
-        log.info("board modify post......." + boardDTO);
-
-        if(bindingResult.hasErrors()) {
-            log.info("has errors.......");
-
+    public String modify(@Valid BoardDTO boardDTO, PageRequestDTO pageRequestDTO, BindingResult bindingResult, RedirectAttributes redirectAttributes){
+        if(bindingResult.hasErrors()){
             String link = pageRequestDTO.getLink();
 
-            redirectAttributes.addFlashAttribute("errors", bindingResult.getAllErrors() );
-
-            redirectAttributes.addAttribute("bno", boardDTO.getBno());
+            redirectAttributes.addFlashAttribute("errors", bindingResult.getAllErrors());
 
             return "redirect:/board/modify?"+link;
         }
+        System.out.println(boardDTO.getBno());
 
         boardService.modify(boardDTO);
 
@@ -101,18 +94,40 @@ public class BoardController {
         return "redirect:/board/read";
     }
 
-
+    @PreAuthorize("principal.username == #boardDTO.writer")
     @PostMapping("/remove")
-    public String remove(@RequestParam("bno") Long bno, RedirectAttributes redirectAttributes) {
+    public String remove(BoardDTO boardDTO, RedirectAttributes redirectAttributes){
+        System.out.println("여기는 옴");
+        boardService.remove(boardDTO.getBno());
 
-        log.info("remove post.. " + bno);
+        List<String> fileNames = boardDTO.getFileNames();
 
-        boardService.remove(bno);
+        if(fileNames != null && fileNames.size() > 0){
+            removeFiles(fileNames);
+        }
 
         redirectAttributes.addFlashAttribute("result", "removed");
 
         return "redirect:/board/list";
+    }
 
+    public void removeFiles(List<String> files){
+        System.out.println("리스트 찍자" + files);
+        for(String fileName : files){
+            Resource resource = new FileSystemResource(uploadPath + File.separator + fileName);
+
+            try {
+                String contentType = Files.probeContentType(resource.getFile().toPath());
+                resource.getFile().delete();
+
+                if(contentType.startsWith("image")){
+                    File thumbnailFile = new File(uploadPath + File.separator + "s_" + fileName);
+
+                    thumbnailFile.delete();
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
     }
 }
-

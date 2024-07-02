@@ -8,11 +8,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
+@Table(name = "board")
 @Getter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString(exclude = "imageSet")
+@ToString
 public class Board extends BaseEntity{
 
     @Id
@@ -34,7 +35,7 @@ public class Board extends BaseEntity{
     }
 
 
-    @OneToMany(mappedBy = "board", cascade = {CascadeType.ALL}, fetch = FetchType.LAZY, orphanRemoval = true)
+    @OneToMany(mappedBy = "board", cascade = {CascadeType.ALL}, fetch = FetchType.LAZY, orphanRemoval = true) // BoardImage 의 board 변수
     @Builder.Default
     @BatchSize(size = 20)
     private Set<BoardImage> imageSet = new HashSet<>();

@@ -6,7 +6,7 @@ import org.zerock.b01.dto.ReplyDTO;
 
 public interface ReplyService {
 
-    Long register(ReplyDTO replyDTO);
+    Long insert(ReplyDTO replyDTO);
 
     ReplyDTO read(Long rno);
 
@@ -15,5 +15,4 @@ public interface ReplyService {
     void remove(Long rno);
 
     PageResponseDTO<ReplyDTO> getListOfBoard(Long bno, PageRequestDTO pageRequestDTO);
-
 }
